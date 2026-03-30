@@ -1,9 +1,12 @@
+import { AppShell } from '../components/layout/AppShell';
+import { AppHeader } from '../components/layout/AppHeader';
+import { ProfileHero } from '../features/profile/components/ProfileHero';
+
 export default function App() {
   return (
-    <main>
-      <h1>ХочуХочу</h1>
-      <h2>Wishlist Ксюши</h2>
-      <p>Базовый каркас приложения</p>
-    </main>
+    <AppShell>
+      <AppHeader />
+      <ProfileHero />
+    </AppShell>
   );
 }
