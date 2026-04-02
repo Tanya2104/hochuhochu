@@ -5,6 +5,7 @@ import type { WishlistItem, WishlistPriority } from '../types';
 type WishlistCardProps = {
   item: WishlistItem;
   onDelete?: (id: string) => void;
+  onEdit?: (item: WishlistItem) => void;
 };
 
 const priorityMeta: Record<WishlistPriority, { label: string; className: string }> = {
@@ -26,7 +27,7 @@ const priorityMeta: Record<WishlistPriority, { label: string; className: string 
   },
 };
 
-export function WishlistCard({ item, onDelete }: WishlistCardProps) {
+export function WishlistCard({ item, onDelete, onEdit }: WishlistCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const meta = priorityMeta[item.priority];
 
@@ -91,15 +92,27 @@ export function WishlistCard({ item, onDelete }: WishlistCardProps) {
           {isExpanded ? 'Скрыть' : 'Открыть'}
         </button>
 
-        {onDelete ? (
-          <button
-            type="button"
-            onClick={() => onDelete(item.id)}
-            className="rounded-md border border-slate-200 px-2.5 py-1 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
-          >
-            Удалить
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {onEdit ? (
+            <button
+              type="button"
+              onClick={() => onEdit(item)}
+              className="rounded-md border border-rose-200 px-2.5 py-1 text-sm text-rose-700 transition hover:bg-rose-50 hover:text-rose-800"
+            >
+              Редактировать
+            </button>
+          ) : null}
+
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="rounded-md border border-slate-200 px-2.5 py-1 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
+            >
+              Удалить
+            </button>
+          ) : null}
+        </div>
       </div>
     </Card>
   );
