@@ -3,6 +3,7 @@ import type { WishlistItem, WishlistPriority } from '../types';
 
 type WishlistCardProps = {
   item: WishlistItem;
+  onDelete?: (id: string) => void;
 };
 
 const priorityMeta: Record<WishlistPriority, { label: string; className: string }> = {
@@ -24,7 +25,7 @@ const priorityMeta: Record<WishlistPriority, { label: string; className: string 
   },
 };
 
-export function WishlistCard({ item }: WishlistCardProps) {
+export function WishlistCard({ item, onDelete }: WishlistCardProps) {
   const meta = priorityMeta[item.priority];
 
   return (
@@ -42,14 +43,26 @@ export function WishlistCard({ item }: WishlistCardProps) {
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-base font-semibold text-slate-900">{item.price}</span>
-        <a
-          className="text-sm font-medium text-indigo-600 underline-offset-2 transition hover:text-indigo-500 hover:underline"
-          href={item.link}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Открыть
-        </a>
+
+        <div className="flex items-center gap-3">
+          <a
+            className="text-sm font-medium text-indigo-600 underline-offset-2 transition hover:text-indigo-500 hover:underline"
+            href={item.link}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Открыть
+          </a>
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="rounded-md border border-slate-200 px-2.5 py-1 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
+            >
+              Удалить
+            </button>
+          ) : null}
+        </div>
       </div>
     </Card>
   );
