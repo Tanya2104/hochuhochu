@@ -56,6 +56,7 @@ export default function App() {
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
 
@@ -164,19 +165,64 @@ export default function App() {
     closeForm();
   };
 
+  const buildWishlistShareText = () => {
+    if (items.length === 0) {
+      return 'Пока в списке ничего нет';
+    }
+
+    const formattedItems = items
+      .map(
+        (item, index) =>
+          `${index + 1}. ${item.title}
+   Описание: ${item.description}
+   Цена: ${item.price}
+   Приоритет: ${priorityLabels[item.priority]}`,
+      )
+      .join('\n\n');
+
+    return `ХочуХочу — Wishlist Ксюши
+
+${formattedItems}`;
+  };
+
+  const handleShare = async () => {
+    const textToShare = buildWishlistShareText();
+
+    try {
+      await navigator.clipboard.writeText(textToShare);
+      setShareStatus('success');
+    } catch {
+      setShareStatus('error');
+    }
+  };
+
   return (
     <AppShell>
       <AppHeader />
       <ProfileHero />
 
       <section className="mb-6 sm:mb-8">
-        <button
-          type="button"
-          onClick={handleToggleForm}
-          className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
-        >
-          {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
-        </button>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={handleToggleForm}
+            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+          >
+            {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+          >
+            Поделиться списком
+          </button>
+        </div>
+        {shareStatus ? (
+          <p className="mt-2 text-xs text-rose-700">
+            {shareStatus === 'success' ? 'Список скопирован' : 'Не удалось скопировать список'}
+          </p>
+        ) : null}
       </section>
 
       {isFormOpen ? (
