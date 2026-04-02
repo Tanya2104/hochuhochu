@@ -36,7 +36,7 @@ export default function App() {
       >
         + Добавить хотелку
       </button>
-      <WishlistGrid items={items} />
+      <WishlistGrid items={items} onDelete={handleDelete} />
     </AppShell>
   );
 }
