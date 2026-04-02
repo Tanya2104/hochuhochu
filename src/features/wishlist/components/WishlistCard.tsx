@@ -28,9 +28,9 @@ export function WishlistCard({ item }: WishlistCardProps) {
   const meta = priorityMeta[item.priority];
 
   return (
-    <Card className="space-y-3 border border-rose-100/80 bg-gradient-to-b from-rose-50/50 to-white">
+    <Card className="space-y-3 border border-rose-100/80 bg-gradient-to-b from-rose-50/60 to-white">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+        <h3 className="text-base font-semibold text-slate-900 sm:text-lg">{item.title}</h3>
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
         >
@@ -38,7 +38,7 @@ export function WishlistCard({ item }: WishlistCardProps) {
         </span>
       </div>
 
-      <p className="text-sm text-slate-600">{item.description}</p>
+      <p className="text-sm leading-relaxed text-slate-600">{item.description}</p>
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-base font-semibold text-slate-900">{item.price}</span>
