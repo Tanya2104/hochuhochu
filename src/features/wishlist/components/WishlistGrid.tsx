@@ -16,7 +16,7 @@ export function WishlistGrid({ items }: WishlistGridProps) {
       />
 
       {items.length === 0 ? (
-        <p className="rounded-2xl bg-white/80 p-6 text-sm text-slate-500 shadow-sm sm:text-base">
+        <p className="rounded-2xl border border-slate-200 bg-white/85 p-6 text-sm text-slate-500 shadow-sm sm:text-base">
           Пока тут пусто — самое время добавить первую хотелку
         </p>
       ) : (

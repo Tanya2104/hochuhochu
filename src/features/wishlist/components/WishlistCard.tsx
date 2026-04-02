@@ -5,20 +5,36 @@ type WishlistCardProps = {
   item: WishlistItem;
 };
 
-const priorityLabels: Record<WishlistPriority, string> = {
-  nice: 'Можно',
-  love: 'Очень хочу',
-  urgent: 'Срочно хочу',
-  cute: 'Милая мелочь',
+const priorityMeta: Record<WishlistPriority, { label: string; className: string }> = {
+  nice: {
+    label: 'Можно',
+    className: 'bg-emerald-100 text-emerald-700',
+  },
+  love: {
+    label: 'Очень хочу',
+    className: 'bg-rose-100 text-rose-700',
+  },
+  urgent: {
+    label: 'Срочно хочу',
+    className: 'bg-amber-100 text-amber-800',
+  },
+  cute: {
+    label: 'Милая мелочь',
+    className: 'bg-violet-100 text-violet-700',
+  },
 };
 
 export function WishlistCard({ item }: WishlistCardProps) {
+  const meta = priorityMeta[item.priority];
+
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3 border border-rose-100/80 bg-gradient-to-b from-rose-50/50 to-white">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-          {priorityLabels[item.priority]}
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
+        >
+          {meta.label}
         </span>
       </div>
 
