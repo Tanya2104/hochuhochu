@@ -20,9 +20,47 @@ export default function App() {
   const [link, setLink] = useState('');
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setPrice('');
+    setLink('');
+    setPriority('nice');
+  };
+
+  const closeForm = () => {
+    resetForm();
+    setEditingItemId(null);
+    setIsFormOpen(false);
+  };
 
   const handleDelete = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+
+    if (editingItemId === id) {
+      closeForm();
+    }
+  };
+
+  const handleEdit = (item: WishlistItem) => {
+    setEditingItemId(item.id);
+    setTitle(item.title);
+    setDescription(item.description);
+    setPrice(item.price);
+    setLink(item.link);
+    setPriority(item.priority);
+    setIsFormOpen(true);
+  };
+
+  const handleToggleForm = () => {
+    if (isFormOpen) {
+      closeForm();
+      return;
+    }
+
+    setIsFormOpen(true);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -37,22 +75,35 @@ export default function App() {
     const trimmedPrice = price.trim();
     const trimmedLink = link.trim();
 
-    const newItem: WishlistItem = {
-      id: Date.now().toString(),
-      title: trimmedTitle,
-      description: trimmedDescription || 'Без описания',
-      price: trimmedPrice || '—',
-      link: trimmedLink || 'https://example.com',
-      priority,
-    };
+    if (editingItemId) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === editingItemId
+            ? {
+                ...item,
+                title: trimmedTitle,
+                description: trimmedDescription || 'Без описания',
+                price: trimmedPrice || '—',
+                link: trimmedLink || 'https://example.com',
+                priority,
+              }
+            : item,
+        ),
+      );
+    } else {
+      const newItem: WishlistItem = {
+        id: Date.now().toString(),
+        title: trimmedTitle,
+        description: trimmedDescription || 'Без описания',
+        price: trimmedPrice || '—',
+        link: trimmedLink || 'https://example.com',
+        priority,
+      };
 
-    setItems((prev) => [newItem, ...prev]);
-    setTitle('');
-    setDescription('');
-    setPrice('');
-    setLink('');
-    setPriority('nice');
-    setIsFormOpen(false);
+      setItems((prev) => [newItem, ...prev]);
+    }
+
+    closeForm();
   };
 
   return (
@@ -63,7 +114,7 @@ export default function App() {
       <section className="mb-6 sm:mb-8">
         <button
           type="button"
-          onClick={() => setIsFormOpen((prev) => !prev)}
+          onClick={handleToggleForm}
           className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
         >
           {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
@@ -76,10 +127,12 @@ export default function App() {
           className="mb-6 space-y-4 rounded-2xl border border-rose-100 bg-rose-50/70 p-4 shadow-sm sm:p-5"
         >
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-rose-900">Добавить хотелку</h2>
+            <h2 className="text-lg font-semibold text-rose-900">
+              {editingItemId ? 'Редактировать хотелку' : 'Добавить хотелку'}
+            </h2>
             <button
               type="button"
-              onClick={() => setIsFormOpen(false)}
+              onClick={closeForm}
               className="rounded-md border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100"
             >
               Закрыть
@@ -165,12 +218,12 @@ export default function App() {
             type="submit"
             className="w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-600"
           >
-            Сохранить хотелку
+            {editingItemId ? 'Сохранить изменения' : 'Сохранить хотелку'}
           </button>
         </form>
       ) : null}
 
-      <WishlistGrid items={items} onDelete={handleDelete} />
+      <WishlistGrid items={items} onDelete={handleDelete} onEdit={handleEdit} />
     </AppShell>
   );
 }
