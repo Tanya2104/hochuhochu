@@ -277,8 +277,8 @@ export default function App() {
 
   return (
     <AppShell>
-      <AppHeader />
-      <ProfileHero />
+      <AppHeader isPublicView={isPublicView} />
+      <ProfileHero isPublicView={isPublicView} />
 
       {!isPublicView ? (
         <section className="mb-6 sm:mb-8">
