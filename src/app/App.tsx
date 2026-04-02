@@ -4,6 +4,8 @@ import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
 import { WishlistGrid } from '../features/wishlist/components/WishlistGrid';
 import type { WishlistItem, WishlistPriority } from '../features/wishlist/types';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import type { Database } from '../types/database';
 
 const priorityLabels: Record<WishlistPriority, string> = {
   nice: 'Можно',
@@ -14,6 +16,9 @@ const priorityLabels: Record<WishlistPriority, string> = {
 
 const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
 
+type WishlistRow = Database['public']['Tables']['wishlist_items']['Row'];
+type WishlistInsert = Database['public']['Tables']['wishlist_items']['Insert'];
+type WishlistUpdate = Database['public']['Tables']['wishlist_items']['Update'];
 
 const isWishlistPriority = (value: unknown): value is WishlistPriority =>
   value === 'nice' || value === 'love' || value === 'urgent' || value === 'cute';
@@ -35,20 +40,37 @@ const isWishlistItem = (value: unknown): value is WishlistItem => {
   );
 };
 
-export default function App() {
-  const [items, setItems] = useState<WishlistItem[]>(() => {
-    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
+const normalizeWishlistRow = (row: WishlistRow): WishlistItem | null => {
+  if (!isWishlistPriority(row.priority)) {
+    return null;
+  }
 
-    try {
-      const parsed: unknown = JSON.parse(stored);
-      return Array.isArray(parsed) ? (parsed as WishlistItem[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    price: row.price,
+    priority: row.priority,
+    link: row.link,
+  };
+};
+
+const getFallbackItems = (): WishlistItem[] => {
+  const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
+  if (!stored) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.filter(isWishlistItem) : [];
+  } catch {
+    return [];
+  }
+};
+
+export default function App() {
+  const [items, setItems] = useState<WishlistItem[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -57,27 +79,43 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<'success' | 'error' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   useEffect(() => {
-
-    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
-    if (!stored) {
-      return;
-    }
-
-    try {
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.every(isWishlistItem)) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setItems(parsed);
+    const loadItems = async () => {
+      if (!isSupabaseConfigured) {
+        setItems(getFallbackItems());
+        setRequestError('Не настроено подключение к Supabase. Показываем локально сохранённый список.');
+        setIsLoading(false);
+        return;
       }
-    } catch {
-      // Ignore invalid localStorage JSON.
-    }
+
+      const { data, error } = await supabase
+        .from('wishlist_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setItems(getFallbackItems());
+        setRequestError('Не удалось загрузить хотелки из облака. Показываем локально сохранённый список.');
+        setIsLoading(false);
+        return;
+      }
+
+      const normalizedItems = data
+        .map(normalizeWishlistRow)
+        .filter((item): item is WishlistItem => item !== null);
+
+      setItems(normalizedItems);
+      setRequestError(null);
+      setIsLoading(false);
+    };
+
+    void loadItems();
   }, []);
 
   useEffect(() => {
-
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
@@ -95,8 +133,21 @@ export default function App() {
     setIsFormOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!isSupabaseConfigured) {
+      setRequestError('Удаление недоступно, пока не настроен Supabase.');
+      return;
+    }
+
+    const { error } = await supabase.from('wishlist_items').delete().eq('id', id);
+
+    if (error) {
+      setRequestError('Не удалось удалить хотелку. Попробуй ещё раз.');
+      return;
+    }
+
     setItems((prev) => prev.filter((item) => item.id !== id));
+    setRequestError(null);
 
     if (editingItemId === id) {
       closeForm();
@@ -122,7 +173,7 @@ export default function App() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedTitle = title.trim();
@@ -130,38 +181,65 @@ export default function App() {
       return;
     }
 
-    const trimmedDescription = description.trim();
-    const trimmedPrice = price.trim();
-    const trimmedLink = link.trim();
-
-    if (editingItemId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingItemId
-            ? {
-                ...item,
-                title: trimmedTitle,
-                description: trimmedDescription || 'Без описания',
-                price: trimmedPrice || '—',
-                link: trimmedLink || 'https://example.com',
-                priority,
-              }
-            : item,
-        ),
-      );
-    } else {
-      const newItem: WishlistItem = {
-        id: Date.now().toString(),
-        title: trimmedTitle,
-        description: trimmedDescription || 'Без описания',
-        price: trimmedPrice || '—',
-        link: trimmedLink || 'https://example.com',
-        priority,
-      };
-
-      setItems((prev) => [newItem, ...prev]);
+    if (!isSupabaseConfigured) {
+      setRequestError('Сохранение недоступно, пока не настроен Supabase.');
+      return;
     }
 
+    const basePayload = {
+      title: trimmedTitle,
+      description: description.trim() || 'Без описания',
+      price: price.trim() || '—',
+      link: link.trim() || 'https://example.com',
+      priority,
+    };
+
+    if (editingItemId) {
+      const updatePayload: WishlistUpdate = basePayload;
+
+      const { data, error } = await supabase
+        .from('wishlist_items')
+        .update(updatePayload)
+        .eq('id', editingItemId)
+        .select()
+        .single();
+
+      if (error) {
+        setRequestError('Не удалось сохранить изменения. Попробуй ещё раз.');
+        return;
+      }
+
+      const normalizedItem = normalizeWishlistRow(data);
+      if (!normalizedItem) {
+        setRequestError('Данные после обновления пришли в неверном формате.');
+        return;
+      }
+
+      setItems((prev) => prev.map((item) => (item.id === editingItemId ? normalizedItem : item)));
+    } else {
+      const insertPayload: WishlistInsert = basePayload;
+
+      const { data, error } = await supabase
+        .from('wishlist_items')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (error) {
+        setRequestError('Не удалось добавить хотелку. Попробуй ещё раз.');
+        return;
+      }
+
+      const normalizedItem = normalizeWishlistRow(data);
+      if (!normalizedItem) {
+        setRequestError('Данные после добавления пришли в неверном формате.');
+        return;
+      }
+
+      setItems((prev) => [normalizedItem, ...prev]);
+    }
+
+    setRequestError(null);
     closeForm();
   };
 
@@ -223,6 +301,7 @@ ${formattedItems}`;
             {shareStatus === 'success' ? 'Список скопирован' : 'Не удалось скопировать список'}
           </p>
         ) : null}
+        {requestError ? <p className="mt-2 text-xs text-rose-700">{requestError}</p> : null}
       </section>
 
       {isFormOpen ? (
@@ -327,7 +406,13 @@ ${formattedItems}`;
         </form>
       ) : null}
 
-      <WishlistGrid items={items} onDelete={handleDelete} onEdit={handleEdit} />
+      {isLoading ? (
+        <p className="rounded-2xl border border-rose-100 bg-white/90 p-6 text-sm text-slate-500 shadow-sm sm:text-base">
+          Загружаем хотелки...
+        </p>
+      ) : (
+        <WishlistGrid items={items} onDelete={handleDelete} onEdit={handleEdit} />
+      )}
     </AppShell>
   );
 }
