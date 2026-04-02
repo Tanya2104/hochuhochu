@@ -2,7 +2,11 @@ import { Container } from '../../../components/ui/Container';
 import { Card } from '../../../components/ui/Card';
 import { profileMock } from '../mock';
 
-export function ProfileHero() {
+type ProfileHeroProps = {
+  isPublicView?: boolean;
+};
+
+export function ProfileHero({ isPublicView = false }: ProfileHeroProps) {
   return (
     <section className="py-6 sm:py-8">
       <Container>
@@ -13,6 +17,11 @@ export function ProfileHero() {
             </h1>
             <p className="text-sm font-medium text-rose-700/80">{profileMock.age} лет</p>
             <p className="text-base leading-relaxed text-rose-900/70">{profileMock.bio}</p>
+            {isPublicView ? (
+              <p className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-rose-900/80">
+                Список желаний Ксюши. Здесь собраны вещи, которые ей правда понравятся.
+              </p>
+            ) : null}
           </div>
         </Card>
       </Container>
