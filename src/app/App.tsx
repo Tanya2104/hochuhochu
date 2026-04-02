@@ -72,7 +72,7 @@ const getFallbackItems = (): WishlistItem[] => {
 export default function App() {
   const isPublicView = new URLSearchParams(window.location.search).get('view') === 'public';
   const hasSupabase = isSupabaseConfigured && supabase !== null;
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [items, setItems] = useState<WishlistItem[]>(() => getFallbackItems());
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -87,7 +87,6 @@ export default function App() {
   useEffect(() => {
     const loadItems = async () => {
       if (!hasSupabase || !supabase) {
-        setItems(getFallbackItems());
         setRequestError(
           'Supabase пока не настроен. Приложение работает без облачной синхронизации.',
         );
@@ -101,16 +100,27 @@ export default function App() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        setItems(getFallbackItems());
         setRequestError('Не удалось загрузить хотелки из облака. Показываем локально сохранённый список.');
         setIsLoading(false);
         return;
       }
 
-      const rows = (data ?? []) as WishlistRow[];
+      if (!data) {
+        setRequestError('Облако не вернуло данные. Показываем локально сохранённый список.');
+        setIsLoading(false);
+        return;
+      }
+
+      const rows = data as WishlistRow[];
       const normalizedItems = rows
         .map(normalizeWishlistRow)
         .filter((item): item is WishlistItem => item !== null);
+
+      if (rows.length > 0 && normalizedItems.length === 0) {
+        setRequestError('Не удалось прочитать формат данных из облака. Показываем локально сохранённый список.');
+        setIsLoading(false);
+        return;
+      }
 
       setItems(normalizedItems);
       setRequestError(null);
@@ -121,8 +131,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (hasSupabase) {
+      return;
+    }
+
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+  }, [hasSupabase, items]);
 
   const resetForm = () => {
     setTitle('');
