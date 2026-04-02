@@ -5,9 +5,10 @@ import { WishlistCard } from './WishlistCard';
 
 type WishlistGridProps = {
   items: WishlistItem[];
+  onDelete?: (id: string) => void;
 };
 
-export function WishlistGrid({ items }: WishlistGridProps) {
+export function WishlistGrid({ items, onDelete }: WishlistGridProps) {
   return (
     <Container className="py-8 sm:py-10">
       <SectionTitle title="ХочуХочу список" subtitle="Добавляй свои желания и делись ими" />
@@ -19,7 +20,7 @@ export function WishlistGrid({ items }: WishlistGridProps) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {items.map((item) => (
-            <WishlistCard key={item.id} item={item} />
+            <WishlistCard key={item.id} item={item} onDelete={onDelete} />
           ))}
         </div>
       )}

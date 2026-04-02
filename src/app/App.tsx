@@ -8,6 +8,10 @@ import type { WishlistItem } from '../features/wishlist/types';
 export default function App() {
   const [items, setItems] = useState<WishlistItem[]>([]);
 
+  const handleDelete = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const handleAdd = () => {
     const newItem: WishlistItem = {
       id: Date.now().toString(),
@@ -29,9 +33,9 @@ export default function App() {
         onClick={handleAdd}
         className="mb-6 rounded-xl bg-rose-500 px-4 py-2 text-white shadow-sm hover:bg-rose-600"
       >
-        Добавить ХОЧУ
+        + Добавить хотелку
       </button>
-      <WishlistGrid items={items} />
+      <WishlistGrid items={items} onDelete={handleDelete} />
     </AppShell>
   );
 }
