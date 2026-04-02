@@ -14,6 +14,27 @@ const priorityLabels: Record<WishlistPriority, string> = {
 
 const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
 
+
+const isWishlistPriority = (value: unknown): value is WishlistPriority =>
+  value === 'nice' || value === 'love' || value === 'urgent' || value === 'cute';
+
+const isWishlistItem = (value: unknown): value is WishlistItem => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<WishlistItem>;
+
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.description === 'string' &&
+    typeof candidate.price === 'string' &&
+    typeof candidate.link === 'string' &&
+    isWishlistPriority(candidate.priority)
+  );
+};
+
 export default function App() {
   const [items, setItems] = useState<WishlistItem[]>(() => {
     const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
@@ -37,6 +58,25 @@ export default function App() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   useEffect(() => {
+
+    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.every(isWishlistItem)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setItems(parsed);
+      }
+    } catch {
+      // Ignore invalid localStorage JSON.
+    }
+  }, []);
+
+  useEffect(() => {
+
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
