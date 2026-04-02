@@ -14,6 +14,7 @@ const priorityLabels: Record<WishlistPriority, string> = {
 
 const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
 
+
 const isWishlistPriority = (value: unknown): value is WishlistPriority =>
   value === 'nice' || value === 'love' || value === 'urgent' || value === 'cute';
 
@@ -35,7 +36,19 @@ const isWishlistItem = (value: unknown): value is WishlistItem => {
 };
 
 export default function App() {
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [items, setItems] = useState<WishlistItem[]>(() => {
+    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(stored);
+      return Array.isArray(parsed) ? (parsed as WishlistItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -45,6 +58,7 @@ export default function App() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   useEffect(() => {
+
     const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
     if (!stored) {
       return;
@@ -62,6 +76,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
