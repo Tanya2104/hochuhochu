@@ -144,7 +144,12 @@ export default function App() {
     }
 
     if (!hasSupabase || !supabase) {
-      setRequestError('Удаление недоступно, пока не настроен Supabase.');
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      setRequestError(null);
+
+      if (editingItemId === id) {
+        closeForm();
+      }
       return;
     }
 
@@ -202,11 +207,6 @@ export default function App() {
       return;
     }
 
-    if (!hasSupabase || !supabase) {
-      setRequestError('Сохранение недоступно, пока не настроен Supabase.');
-      return;
-    }
-
     const basePayload = {
       title: trimmedTitle,
       description: description.trim() || 'Без описания',
@@ -214,6 +214,24 @@ export default function App() {
       link: link.trim() || 'https://example.com',
       priority,
     };
+
+    if (!hasSupabase || !supabase) {
+      if (editingItemId) {
+        setItems((prev) =>
+          prev.map((item) => (item.id === editingItemId ? { ...item, ...basePayload } : item)),
+        );
+      } else {
+        const localItem: WishlistItem = {
+          id: crypto.randomUUID(),
+          ...basePayload,
+        };
+        setItems((prev) => [localItem, ...prev]);
+      }
+
+      setRequestError(null);
+      closeForm();
+      return;
+    }
 
     if (editingItemId) {
       const updatePayload: WishlistUpdate = basePayload;
