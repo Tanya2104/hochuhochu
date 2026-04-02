@@ -7,9 +7,10 @@ type WishlistGridProps = {
   items: WishlistItem[];
   onDelete?: (id: string) => void;
   onEdit?: (item: WishlistItem) => void;
+  isReadOnly?: boolean;
 };
 
-export function WishlistGrid({ items, onDelete, onEdit }: WishlistGridProps) {
+export function WishlistGrid({ items, onDelete, onEdit, isReadOnly = false }: WishlistGridProps) {
   return (
     <Container className="py-8 sm:py-10">
       <SectionTitle title="ХочуХочу список" subtitle="Добавляй свои желания и делись ими" />
@@ -21,7 +22,13 @@ export function WishlistGrid({ items, onDelete, onEdit }: WishlistGridProps) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {items.map((item) => (
-            <WishlistCard key={item.id} item={item} onDelete={onDelete} onEdit={onEdit} />
+            <WishlistCard
+              key={item.id}
+              item={item}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              isReadOnly={isReadOnly}
+            />
           ))}
         </div>
       )}

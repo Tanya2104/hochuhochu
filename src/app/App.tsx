@@ -70,6 +70,7 @@ const getFallbackItems = (): WishlistItem[] => {
 };
 
 export default function App() {
+  const isPublicView = new URLSearchParams(window.location.search).get('view') === 'public';
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -103,7 +104,8 @@ export default function App() {
         return;
       }
 
-      const normalizedItems = data
+      const rows = (data ?? []) as WishlistRow[];
+      const normalizedItems = rows
         .map(normalizeWishlistRow)
         .filter((item): item is WishlistItem => item !== null);
 
@@ -134,6 +136,10 @@ export default function App() {
   };
 
   const handleDelete = async (id: string) => {
+    if (isPublicView) {
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       setRequestError('Удаление недоступно, пока не настроен Supabase.');
       return;
@@ -155,6 +161,10 @@ export default function App() {
   };
 
   const handleEdit = (item: WishlistItem) => {
+    if (isPublicView) {
+      return;
+    }
+
     setEditingItemId(item.id);
     setTitle(item.title);
     setDescription(item.description);
@@ -165,6 +175,10 @@ export default function App() {
   };
 
   const handleToggleForm = () => {
+    if (isPublicView) {
+      return;
+    }
+
     if (isFormOpen) {
       closeForm();
       return;
@@ -175,6 +189,10 @@ export default function App() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isPublicView) {
+      return;
+    }
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
@@ -243,31 +261,14 @@ export default function App() {
     closeForm();
   };
 
-  const buildWishlistShareText = () => {
-    if (items.length === 0) {
-      return 'Пока в списке ничего нет';
-    }
-
-    const formattedItems = items
-      .map(
-        (item, index) =>
-          `${index + 1}. ${item.title}
-   Описание: ${item.description}
-   Цена: ${item.price}
-   Приоритет: ${priorityLabels[item.priority]}`,
-      )
-      .join('\n\n');
-
-    return `ХочуХочу — Wishlist Ксюши
-
-${formattedItems}`;
-  };
+  const buildPublicShareLink = () =>
+    `${window.location.origin}${window.location.pathname}?view=public`;
 
   const handleShare = async () => {
-    const textToShare = buildWishlistShareText();
+    const shareLink = buildPublicShareLink();
 
     try {
-      await navigator.clipboard.writeText(textToShare);
+      await navigator.clipboard.writeText(shareLink);
       setShareStatus('success');
     } catch {
       setShareStatus('error');
@@ -279,32 +280,38 @@ ${formattedItems}`;
       <AppHeader />
       <ProfileHero />
 
-      <section className="mb-6 sm:mb-8">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={handleToggleForm}
-            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
-          >
-            {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
-          >
-            Поделиться списком
-          </button>
-        </div>
-        {shareStatus ? (
-          <p className="mt-2 text-xs text-rose-700">
-            {shareStatus === 'success' ? 'Список скопирован' : 'Не удалось скопировать список'}
-          </p>
-        ) : null}
-        {requestError ? <p className="mt-2 text-xs text-rose-700">{requestError}</p> : null}
-      </section>
+      {!isPublicView ? (
+        <section className="mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={handleToggleForm}
+              className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+            >
+              {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
+            </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+            >
+              Поделиться ссылкой
+            </button>
+          </div>
+          {shareStatus ? (
+            <p className="mt-2 text-xs text-rose-700">
+              {shareStatus === 'success' ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку'}
+            </p>
+          ) : null}
+          {requestError ? <p className="mt-2 text-xs text-rose-700">{requestError}</p> : null}
+        </section>
+      ) : requestError ? (
+        <section className="mb-6 sm:mb-8">
+          <p className="mt-2 text-xs text-rose-700">{requestError}</p>
+        </section>
+      ) : null}
 
-      {isFormOpen ? (
+      {!isPublicView && isFormOpen ? (
         <form
           onSubmit={handleSubmit}
           className="mb-6 space-y-4 rounded-2xl border border-rose-100 bg-rose-50/70 p-4 shadow-sm sm:p-5"
@@ -411,7 +418,12 @@ ${formattedItems}`;
           Загружаем хотелки...
         </p>
       ) : (
-        <WishlistGrid items={items} onDelete={handleDelete} onEdit={handleEdit} />
+        <WishlistGrid
+          items={items}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          isReadOnly={isPublicView}
+        />
       )}
     </AppShell>
   );
