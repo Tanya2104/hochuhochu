@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
@@ -12,8 +12,22 @@ const priorityLabels: Record<WishlistPriority, string> = {
   cute: 'Милая мелочь',
 };
 
+const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
+
 export default function App() {
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [items, setItems] = useState<WishlistItem[]>(() => {
+    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(stored);
+      return Array.isArray(parsed) ? (parsed as WishlistItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -21,6 +35,10 @@ export default function App() {
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const resetForm = () => {
     setTitle('');
