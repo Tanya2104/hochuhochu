@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
@@ -12,6 +12,28 @@ const priorityLabels: Record<WishlistPriority, string> = {
   cute: 'Милая мелочь',
 };
 
+const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
+
+const isWishlistPriority = (value: unknown): value is WishlistPriority =>
+  value === 'nice' || value === 'love' || value === 'urgent' || value === 'cute';
+
+const isWishlistItem = (value: unknown): value is WishlistItem => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<WishlistItem>;
+
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.description === 'string' &&
+    typeof candidate.price === 'string' &&
+    typeof candidate.link === 'string' &&
+    isWishlistPriority(candidate.priority)
+  );
+};
+
 export default function App() {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [title, setTitle] = useState('');
@@ -21,6 +43,27 @@ export default function App() {
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.every(isWishlistItem)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setItems(parsed);
+      }
+    } catch {
+      // Ignore invalid localStorage JSON.
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const resetForm = () => {
     setTitle('');
