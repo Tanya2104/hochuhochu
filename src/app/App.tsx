@@ -71,6 +71,7 @@ const getFallbackItems = (): WishlistItem[] => {
 
 export default function App() {
   const isPublicView = new URLSearchParams(window.location.search).get('view') === 'public';
+  const hasSupabase = isSupabaseConfigured && supabase !== null;
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -85,9 +86,11 @@ export default function App() {
 
   useEffect(() => {
     const loadItems = async () => {
-      if (!isSupabaseConfigured) {
+      if (!hasSupabase || !supabase) {
         setItems(getFallbackItems());
-        setRequestError('Не настроено подключение к Supabase. Показываем локально сохранённый список.');
+        setRequestError(
+          'Supabase пока не настроен. Приложение работает без облачной синхронизации.',
+        );
         setIsLoading(false);
         return;
       }
@@ -140,7 +143,7 @@ export default function App() {
       return;
     }
 
-    if (!isSupabaseConfigured) {
+    if (!hasSupabase || !supabase) {
       setRequestError('Удаление недоступно, пока не настроен Supabase.');
       return;
     }
@@ -199,7 +202,7 @@ export default function App() {
       return;
     }
 
-    if (!isSupabaseConfigured) {
+    if (!hasSupabase || !supabase) {
       setRequestError('Сохранение недоступно, пока не настроен Supabase.');
       return;
     }
