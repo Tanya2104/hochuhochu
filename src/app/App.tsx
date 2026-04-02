@@ -1,41 +1,145 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
 import { WishlistGrid } from '../features/wishlist/components/WishlistGrid';
-import type { WishlistItem } from '../features/wishlist/types';
+import type { WishlistItem, WishlistPriority } from '../features/wishlist/types';
 
 export default function App() {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [link, setLink] = useState('');
+  const [priority, setPriority] = useState<WishlistPriority>('nice');
 
   const handleDelete = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleAdd = () => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    const trimmedDescription = description.trim();
+    const trimmedPrice = price.trim();
+    const trimmedLink = link.trim();
+
     const newItem: WishlistItem = {
       id: Date.now().toString(),
-      title: 'Новая хотелка',
-      description: 'Тестовая хотелка',
-      price: '—',
-      priority: 'nice',
-      link: 'https://example.com'
+      title: trimmedTitle,
+      description: trimmedDescription || 'Без описания',
+      price: trimmedPrice || '—',
+      link: trimmedLink || 'https://example.com',
+      priority
     };
 
     setItems((prev) => [newItem, ...prev]);
+    setTitle('');
+    setDescription('');
+    setPrice('');
+    setLink('');
+    setPriority('nice');
   };
 
   return (
     <AppShell>
       <AppHeader />
       <ProfileHero />
-      <button
-        onClick={handleAdd}
-        className="mb-6 rounded-xl bg-rose-500 px-4 py-2 text-white shadow-sm hover:bg-rose-600"
-        data-can-delete={Boolean(handleDelete)}
+
+      <form
+        onSubmit={handleSubmit}
+        className="mb-6 space-y-4 rounded-2xl border border-rose-100 bg-rose-50/70 p-4 shadow-sm sm:p-5"
       >
-        + Добавить хотелку
-      </button>
+        <h2 className="text-lg font-semibold text-rose-900">Добавить хотелку</h2>
+
+        <div className="space-y-2">
+          <label htmlFor="title" className="block text-sm font-medium text-rose-900">
+            Название
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Например, беспроводные наушники"
+            className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="description" className="block text-sm font-medium text-rose-900">
+            Описание
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={3}
+            placeholder="Коротко опишите, почему эта вещь важна"
+            className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="price" className="block text-sm font-medium text-rose-900">
+              Цена
+            </label>
+            <input
+              id="price"
+              type="text"
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+              placeholder="Например, 9 990 ₽"
+              className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="priority" className="block text-sm font-medium text-rose-900">
+              Приоритет
+            </label>
+            <select
+              id="priority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as WishlistPriority)}
+              className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            >
+              <option value="nice">nice</option>
+              <option value="love">love</option>
+              <option value="urgent">urgent</option>
+              <option value="cute">cute</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="link" className="block text-sm font-medium text-rose-900">
+            Ссылка
+          </label>
+          <input
+            id="link"
+            type="url"
+            value={link}
+            onChange={(event) => setLink(event.target.value)}
+            placeholder="https://example.com/product"
+            className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-600"
+        >
+          Сохранить хотелку
+        </button>
+      </form>
+
       <WishlistGrid items={items} onDelete={handleDelete} />
     </AppShell>
   );
