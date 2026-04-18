@@ -19,6 +19,12 @@ const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
 type WishlistRow = Database['public']['Tables']['wishlist_items']['Row'];
 type WishlistInsert = Database['public']['Tables']['wishlist_items']['Insert'];
 type WishlistUpdate = Database['public']['Tables']['wishlist_items']['Update'];
+type StatusTone = 'success' | 'error';
+
+type StatusMessage = {
+  text: string;
+  tone: StatusTone;
+};
 
 const isWishlistPriority = (value: unknown): value is WishlistPriority =>
   value === 'nice' || value === 'love' || value === 'urgent' || value === 'cute';
@@ -89,9 +95,21 @@ export default function App() {
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [shareStatus, setShareStatus] = useState<'success' | 'error' | null>(null);
+  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 3200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [statusMessage]);
 
   useEffect(() => {
     const loadItems = async () => {
@@ -166,9 +184,15 @@ export default function App() {
       return;
     }
 
+    const isConfirmed = window.confirm('Удалить эту хотелку?');
+    if (!isConfirmed) {
+      return;
+    }
+
     if (!hasSupabase || !supabase) {
       setItems((prev) => prev.filter((item) => item.id !== id));
       setRequestError(null);
+      setStatusMessage({ text: 'Хотелка удалена', tone: 'success' });
 
       if (editingItemId === id) {
         closeForm();
@@ -185,6 +209,7 @@ export default function App() {
 
     setItems((prev) => prev.filter((item) => item.id !== id));
     setRequestError(null);
+    setStatusMessage({ text: 'Хотелка удалена', tone: 'success' });
 
     if (editingItemId === id) {
       closeForm();
@@ -252,6 +277,7 @@ export default function App() {
       }
 
       setRequestError(null);
+      setStatusMessage({ text: 'Хотелка сохранена', tone: 'success' });
       closeForm();
       return;
     }
@@ -302,6 +328,7 @@ export default function App() {
     }
 
     setRequestError(null);
+    setStatusMessage({ text: 'Хотелка сохранена', tone: 'success' });
     closeForm();
   };
 
@@ -313,9 +340,9 @@ export default function App() {
 
     try {
       await navigator.clipboard.writeText(shareLink);
-      setShareStatus('success');
+      setStatusMessage({ text: 'Ссылка скопирована', tone: 'success' });
     } catch {
-      setShareStatus('error');
+      setStatusMessage({ text: 'Не удалось скопировать ссылку', tone: 'error' });
     }
   };
 
@@ -323,6 +350,22 @@ export default function App() {
     <AppShell>
       <AppHeader isPublicView={isPublicView} />
       <ProfileHero isPublicView={isPublicView} />
+
+      {statusMessage ? (
+        <section className="mb-4 sm:mb-5">
+          <div
+            className={`rounded-xl border px-3 py-2 text-xs shadow-sm sm:text-sm ${
+              statusMessage.tone === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-rose-200 bg-rose-50 text-rose-700'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {statusMessage.text}
+          </div>
+        </section>
+      ) : null}
 
       {!isPublicView ? (
         <section className="mb-6 sm:mb-8">
@@ -344,11 +387,6 @@ export default function App() {
                   Поделиться ссылкой
                 </button>
               </div>
-              {shareStatus ? (
-                <p className="mt-2 text-xs text-rose-700">
-                  {shareStatus === 'success' ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку'}
-                </p>
-              ) : null}
             </>
           ) : (
             <p className="mt-2 text-xs text-rose-700">
