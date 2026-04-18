@@ -13,7 +13,7 @@ type WishlistGridProps = {
 export function WishlistGrid({ items, onDelete, onEdit, isReadOnly = false }: WishlistGridProps) {
   const sectionTitle = isReadOnly ? 'Идеи для подарка' : 'ХочуХочу список';
   const sectionSubtitle = isReadOnly
-    ? 'Можно открыть карточку и посмотреть детали'
+    ? 'Открой карточку, чтобы посмотреть детали'
     : 'Добавляй свои желания и делись ими';
 
   return (
@@ -21,8 +21,14 @@ export function WishlistGrid({ items, onDelete, onEdit, isReadOnly = false }: Wi
       <SectionTitle title={sectionTitle} subtitle={sectionSubtitle} />
 
       {items.length === 0 ? (
-        <p className="rounded-2xl border border-rose-100 bg-white/90 p-6 text-sm text-slate-500 shadow-sm sm:text-base">
-          {isReadOnly ? 'Пока список пуст' : 'Пока тут пусто — самое время добавить первую хотелку'}
+        <p
+          className={`rounded-2xl p-6 text-sm shadow-sm sm:text-base ${
+            isReadOnly
+              ? 'border border-dashed border-rose-200 bg-white/80 text-center text-slate-500'
+              : 'border border-rose-100 bg-white/90 text-slate-500'
+          }`}
+        >
+          {isReadOnly ? 'Ксюша пока ничего не добавила' : 'Пока тут пусто — самое время добавить первую хотелку'}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
