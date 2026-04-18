@@ -9,6 +9,8 @@ export type Database = {
           price: string;
           priority: string;
           link: string;
+          reserved: boolean;
+          reserved_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -18,6 +20,8 @@ export type Database = {
           price: string;
           priority: string;
           link: string;
+          reserved?: boolean;
+          reserved_by?: string | null;
           created_at?: string;
         };
         Update: {
@@ -27,6 +31,8 @@ export type Database = {
           price?: string;
           priority?: string;
           link?: string;
+          reserved?: boolean;
+          reserved_by?: string | null;
           created_at?: string;
         };
         Relationships: [];

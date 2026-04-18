@@ -8,9 +8,22 @@ type WishlistGridProps = {
   onDelete?: (id: string) => void;
   onEdit?: (item: WishlistItem) => void;
   isReadOnly?: boolean;
+  isPublicView?: boolean;
+  canManageWishlist?: boolean;
+  onReserve?: (item: WishlistItem) => void;
+  onUnreserve?: (id: string) => void;
 };
 
-export function WishlistGrid({ items, onDelete, onEdit, isReadOnly = false }: WishlistGridProps) {
+export function WishlistGrid({
+  items,
+  onDelete,
+  onEdit,
+  isReadOnly = false,
+  isPublicView = false,
+  canManageWishlist = false,
+  onReserve,
+  onUnreserve,
+}: WishlistGridProps) {
   const sectionTitle = isReadOnly ? 'Идеи для подарка' : 'ХочуХочу список';
   const sectionSubtitle = isReadOnly
     ? 'Открой карточку, чтобы посмотреть детали'
@@ -39,6 +52,10 @@ export function WishlistGrid({ items, onDelete, onEdit, isReadOnly = false }: Wi
               onDelete={onDelete}
               onEdit={onEdit}
               isReadOnly={isReadOnly}
+              isPublicView={isPublicView}
+              canManageWishlist={canManageWishlist}
+              onReserve={onReserve}
+              onUnreserve={onUnreserve}
             />
           ))}
         </div>
