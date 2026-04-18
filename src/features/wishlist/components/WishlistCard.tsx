@@ -7,6 +7,10 @@ type WishlistCardProps = {
   onDelete?: (id: string) => void;
   onEdit?: (item: WishlistItem) => void;
   isReadOnly?: boolean;
+  isPublicView?: boolean;
+  canManageWishlist?: boolean;
+  onReserve?: (item: WishlistItem) => void;
+  onUnreserve?: (id: string) => void;
 };
 
 const priorityMeta: Record<WishlistPriority, { label: string; className: string }> = {
@@ -28,7 +32,16 @@ const priorityMeta: Record<WishlistPriority, { label: string; className: string 
   },
 };
 
-export function WishlistCard({ item, onDelete, onEdit, isReadOnly = false }: WishlistCardProps) {
+export function WishlistCard({
+  item,
+  onDelete,
+  onEdit,
+  isReadOnly = false,
+  isPublicView = false,
+  canManageWishlist = false,
+  onReserve,
+  onUnreserve,
+}: WishlistCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const meta = priorityMeta[item.priority];
 
@@ -84,6 +97,15 @@ export function WishlistCard({ item, onDelete, onEdit, isReadOnly = false }: Wis
         )}
       </div>
 
+      {item.reserved ? (
+        <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
+          <p className="text-sm font-semibold text-amber-800">Уже забронировано</p>
+          {item.reservedBy ? (
+            <p className="text-xs text-amber-700">Забронировал(а): {item.reservedBy}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -93,8 +115,28 @@ export function WishlistCard({ item, onDelete, onEdit, isReadOnly = false }: Wis
           {isExpanded ? 'Скрыть' : 'Открыть'}
         </button>
 
+        {isPublicView && !item.reserved && onReserve ? (
+          <button
+            type="button"
+            onClick={() => onReserve(item)}
+            className="rounded-md border border-indigo-200 px-3 py-1 text-sm font-medium text-indigo-700 transition hover:bg-indigo-50 hover:text-indigo-800"
+          >
+            Беру это
+          </button>
+        ) : null}
+
         {!isReadOnly ? (
           <div className="flex items-center gap-2">
+            {canManageWishlist && item.reserved && onUnreserve ? (
+              <button
+                type="button"
+                onClick={() => onUnreserve(item.id)}
+                className="rounded-md border border-amber-200 px-2.5 py-1 text-sm text-amber-700 transition hover:bg-amber-50 hover:text-amber-800"
+              >
+                Снять бронь
+              </button>
+            ) : null}
+
             {onEdit ? (
               <button
                 type="button"

@@ -42,6 +42,10 @@ const isWishlistItem = (value: unknown): value is WishlistItem => {
     typeof candidate.description === 'string' &&
     typeof candidate.price === 'string' &&
     typeof candidate.link === 'string' &&
+    (typeof candidate.reserved === 'boolean' || typeof candidate.reserved === 'undefined') &&
+    (typeof candidate.reservedBy === 'string' ||
+      candidate.reservedBy === null ||
+      typeof candidate.reservedBy === 'undefined') &&
     isWishlistPriority(candidate.priority)
   );
 };
@@ -58,6 +62,8 @@ const normalizeWishlistRow = (row: WishlistRow): WishlistItem | null => {
     price: row.price,
     priority: row.priority,
     link: row.link,
+    reserved: row.reserved ?? false,
+    reservedBy: row.reserved_by ?? null,
   };
 };
 
@@ -69,7 +75,15 @@ const getFallbackItems = (): WishlistItem[] => {
 
   try {
     const parsed: unknown = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed.filter(isWishlistItem) : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(isWishlistItem).map((item) => ({
+      ...item,
+      reserved: item.reserved ?? false,
+      reservedBy: item.reservedBy ?? null,
+    }));
   } catch {
     return [];
   }
@@ -272,6 +286,8 @@ export default function App() {
         const localItem: WishlistItem = {
           id: crypto.randomUUID(),
           ...basePayload,
+          reserved: false,
+          reservedBy: null,
         };
         setItems((prev) => [localItem, ...prev]);
       }
@@ -344,6 +360,89 @@ export default function App() {
     } catch {
       setStatusMessage({ text: 'Не удалось скопировать ссылку', tone: 'error' });
     }
+  };
+
+  const handleReserve = async (item: WishlistItem) => {
+    if (!isPublicView || item.reserved) {
+      return;
+    }
+
+    const input = window.prompt('Как вас зовут?');
+    const reserverName = input?.trim() ?? '';
+    if (!reserverName) {
+      return;
+    }
+
+    if (!hasSupabase || !supabase) {
+      setRequestError(
+        'Бронирование работает только при подключённом Supabase. Сейчас доступен только просмотр.',
+      );
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('wishlist_items')
+      .update({
+        reserved: true,
+        reserved_by: reserverName,
+      })
+      .eq('id', item.id)
+      .eq('reserved', false)
+      .select()
+      .single();
+
+    if (error) {
+      setRequestError('Не удалось забронировать подарок. Возможно, его уже заняли.');
+      return;
+    }
+
+    const normalizedItem = normalizeWishlistRow(data);
+    if (!normalizedItem) {
+      setRequestError('Данные после бронирования пришли в неверном формате.');
+      return;
+    }
+
+    setItems((prev) => prev.map((current) => (current.id === item.id ? normalizedItem : current)));
+    setRequestError(null);
+    setStatusMessage({ text: 'Готово! Подарок забронирован.', tone: 'success' });
+  };
+
+  const handleUnreserve = async (id: string) => {
+    if (!canManageWishlist) {
+      return;
+    }
+
+    if (!hasSupabase || !supabase) {
+      setRequestError(
+        'Снять бронь можно только при подключённом Supabase. Сейчас доступен только просмотр.',
+      );
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('wishlist_items')
+      .update({
+        reserved: false,
+        reserved_by: null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      setRequestError('Не удалось снять бронь. Попробуй ещё раз.');
+      return;
+    }
+
+    const normalizedItem = normalizeWishlistRow(data);
+    if (!normalizedItem) {
+      setRequestError('Данные после снятия брони пришли в неверном формате.');
+      return;
+    }
+
+    setItems((prev) => prev.map((item) => (item.id === id ? normalizedItem : item)));
+    setRequestError(null);
+    setStatusMessage({ text: 'Бронь снята', tone: 'success' });
   };
 
   return (
@@ -513,6 +612,10 @@ export default function App() {
           onDelete={handleDelete}
           onEdit={handleEdit}
           isReadOnly={!canManageWishlist}
+          isPublicView={isPublicView}
+          canManageWishlist={canManageWishlist}
+          onReserve={handleReserve}
+          onUnreserve={handleUnreserve}
         />
       )}
     </AppShell>
