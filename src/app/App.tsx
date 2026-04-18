@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
@@ -15,6 +15,7 @@ const priorityLabels: Record<WishlistPriority, string> = {
 };
 
 const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
+const WISHLIST_IMAGE_BUCKET = 'wishlist-images';
 
 type WishlistRow = Database['public']['Tables']['wishlist_items']['Row'];
 type WishlistInsert = Database['public']['Tables']['wishlist_items']['Insert'];
@@ -22,6 +23,11 @@ type WishlistUpdate = Database['public']['Tables']['wishlist_items']['Update'];
 type StatusTone = 'success' | 'error';
 
 type StatusMessage = {
+  text: string;
+  tone: StatusTone;
+};
+
+type UploadStatus = {
   text: string;
   tone: StatusTone;
 };
@@ -42,6 +48,9 @@ const isWishlistItem = (value: unknown): value is WishlistItem => {
     typeof candidate.description === 'string' &&
     typeof candidate.price === 'string' &&
     typeof candidate.link === 'string' &&
+    (typeof candidate.imageUrl === 'string' ||
+      candidate.imageUrl === null ||
+      typeof candidate.imageUrl === 'undefined') &&
     (typeof candidate.reserved === 'boolean' || typeof candidate.reserved === 'undefined') &&
     (typeof candidate.reservedBy === 'string' ||
       candidate.reservedBy === null ||
@@ -62,6 +71,7 @@ const normalizeWishlistRow = (row: WishlistRow): WishlistItem | null => {
     price: row.price,
     priority: row.priority,
     link: row.link,
+    imageUrl: row.image_url,
     reserved: row.reserved ?? false,
     reservedBy: row.reserved_by ?? null,
   };
@@ -81,6 +91,7 @@ const getFallbackItems = (): WishlistItem[] => {
 
     return parsed.filter(isWishlistItem).map((item) => ({
       ...item,
+      imageUrl: item.imageUrl ?? null,
       reserved: item.reserved ?? false,
       reservedBy: item.reservedBy ?? null,
     }));
@@ -106,12 +117,15 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [link, setLink] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [priority, setPriority] = useState<WishlistPriority>('nice');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [sessionReservedItemIds, setSessionReservedItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -185,7 +199,10 @@ export default function App() {
     setDescription('');
     setPrice('');
     setLink('');
+    setImageUrl(null);
     setPriority('nice');
+    setUploadStatus(null);
+    setIsImageUploading(false);
   };
 
   const closeForm = () => {
@@ -241,8 +258,50 @@ export default function App() {
     setDescription(item.description);
     setPrice(item.price);
     setLink(item.link);
+    setImageUrl(item.imageUrl);
     setPriority(item.priority);
+    setUploadStatus(null);
+    setIsImageUploading(false);
     setIsFormOpen(true);
+  };
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!hasSupabase || !supabase) {
+      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
+      setRequestError('Загрузка изображений доступна только при подключённом Supabase.');
+      return;
+    }
+
+    setUploadStatus({ text: 'Загружаем изображение...', tone: 'success' });
+    setIsImageUploading(true);
+
+    const uniqueName = `${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from(WISHLIST_IMAGE_BUCKET)
+      .upload(uniqueName, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
+      setIsImageUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from(WISHLIST_IMAGE_BUCKET).getPublicUrl(uniqueName);
+    if (!data.publicUrl) {
+      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
+      setIsImageUploading(false);
+      return;
+    }
+
+    setImageUrl(data.publicUrl);
+    setUploadStatus({ text: 'Изображение загружено', tone: 'success' });
+    setRequestError(null);
+    setIsImageUploading(false);
   };
 
   const handleToggleForm = () => {
@@ -277,16 +336,23 @@ export default function App() {
       link: link.trim() || 'https://example.com',
       priority,
     };
+    const dbPayload = {
+      ...basePayload,
+      image_url: imageUrl,
+    };
 
     if (!hasSupabase || !supabase) {
       if (editingItemId) {
         setItems((prev) =>
-          prev.map((item) => (item.id === editingItemId ? { ...item, ...basePayload } : item)),
+          prev.map((item) =>
+            item.id === editingItemId ? { ...item, ...basePayload, imageUrl } : item,
+          ),
         );
       } else {
         const localItem: WishlistItem = {
           id: crypto.randomUUID(),
           ...basePayload,
+          imageUrl,
           reserved: false,
           reservedBy: null,
         };
@@ -300,7 +366,7 @@ export default function App() {
     }
 
     if (editingItemId) {
-      const updatePayload: WishlistUpdate = basePayload;
+      const updatePayload: WishlistUpdate = dbPayload;
 
       const { data, error } = await supabase
         .from('wishlist_items')
@@ -322,7 +388,7 @@ export default function App() {
 
       setItems((prev) => prev.map((item) => (item.id === editingItemId ? normalizedItem : item)));
     } else {
-      const insertPayload: WishlistInsert = basePayload;
+      const insertPayload: WishlistInsert = dbPayload;
 
       const { data, error } = await supabase
         .from('wishlist_items')
@@ -613,8 +679,38 @@ export default function App() {
             />
           </div>
 
+          <div className="space-y-2">
+            <label htmlFor="image-file" className="block text-sm font-medium text-rose-900">
+              Изображение
+            </label>
+            <input
+              id="image-file"
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                void handleImageUpload(event);
+              }}
+              className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-800 file:mr-3 file:rounded-md file:border-0 file:bg-rose-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-rose-700 hover:file:bg-rose-200"
+            />
+            {uploadStatus ? (
+              <p
+                className={`text-xs ${
+                  uploadStatus.tone === 'success' ? 'text-emerald-700' : 'text-rose-700'
+                }`}
+                role="status"
+                aria-live="polite"
+              >
+                {uploadStatus.text}
+              </p>
+            ) : null}
+            {imageUrl ? (
+              <p className="text-xs text-slate-500">Изображение выбрано и будет сохранено в хотелке.</p>
+            ) : null}
+          </div>
+
           <button
             type="submit"
+            disabled={isImageUploading}
             className="w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-600"
           >
             {editingItemId ? 'Сохранить изменения' : 'Сохранить хотелку'}

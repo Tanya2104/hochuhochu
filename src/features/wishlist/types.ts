@@ -7,6 +7,7 @@ export type WishlistItem = {
   price: string;
   priority: WishlistPriority;
   link: string;
+  imageUrl: string | null;
   reserved: boolean;
   reservedBy: string | null;
 };

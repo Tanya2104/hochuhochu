@@ -49,6 +49,15 @@ export function WishlistCard({
 
   return (
     <Card className="space-y-3 overflow-hidden border border-rose-100/80 bg-gradient-to-b from-rose-50/60 to-white">
+      {item.imageUrl ? (
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          className="h-44 w-full rounded-xl object-cover"
+          loading="lazy"
+        />
+      ) : null}
+
       <div className="flex items-start justify-between gap-3">
         <h3
           className={`min-w-0 text-base font-semibold text-slate-900 sm:text-lg ${
