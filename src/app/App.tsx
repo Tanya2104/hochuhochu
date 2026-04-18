@@ -112,6 +112,7 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [sessionReservedItemIds, setSessionReservedItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!statusMessage) {
@@ -403,12 +404,19 @@ export default function App() {
     }
 
     setItems((prev) => prev.map((current) => (current.id === item.id ? normalizedItem : current)));
+    setSessionReservedItemIds((prev) => {
+      const next = new Set(prev);
+      next.add(item.id);
+      return next;
+    });
     setRequestError(null);
     setStatusMessage({ text: 'Готово! Подарок забронирован.', tone: 'success' });
   };
 
   const handleUnreserve = async (id: string) => {
-    if (!canManageWishlist) {
+    const canUnreserveInPublicSession = isPublicView && sessionReservedItemIds.has(id);
+
+    if (!canManageWishlist && !canUnreserveInPublicSession) {
       return;
     }
 
@@ -441,8 +449,20 @@ export default function App() {
     }
 
     setItems((prev) => prev.map((item) => (item.id === id ? normalizedItem : item)));
+    setSessionReservedItemIds((prev) => {
+      if (!prev.has(id)) {
+        return prev;
+      }
+
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     setRequestError(null);
-    setStatusMessage({ text: 'Бронь снята', tone: 'success' });
+    setStatusMessage({
+      text: canUnreserveInPublicSession ? 'Бронь отменена' : 'Бронь снята',
+      tone: 'success',
+    });
   };
 
   return (
@@ -616,6 +636,7 @@ export default function App() {
           canManageWishlist={canManageWishlist}
           onReserve={handleReserve}
           onUnreserve={handleUnreserve}
+          sessionReservedItemIds={sessionReservedItemIds}
         />
       )}
     </AppShell>
