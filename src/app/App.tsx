@@ -70,7 +70,16 @@ const getFallbackItems = (): WishlistItem[] => {
 };
 
 export default function App() {
-  const isPublicView = new URLSearchParams(window.location.search).get('view') === 'public';
+  const searchParams = new URLSearchParams(window.location.search);
+  const isPublicView = searchParams.get('view') === 'public';
+  const adminSecret = import.meta.env.VITE_ADMIN_SECRET;
+  const adminParam = searchParams.get('admin');
+  const isAdminAuthorized =
+    typeof adminParam === 'string' &&
+    adminParam.length > 0 &&
+    typeof adminSecret === 'string' &&
+    adminParam === adminSecret;
+  const canManageWishlist = !isPublicView && isAdminAuthorized;
   const hasSupabase = isSupabaseConfigured && supabase !== null;
   const [items, setItems] = useState<WishlistItem[]>(() => getFallbackItems());
   const [title, setTitle] = useState('');
@@ -153,7 +162,7 @@ export default function App() {
   };
 
   const handleDelete = async (id: string) => {
-    if (isPublicView) {
+    if (!canManageWishlist) {
       return;
     }
 
@@ -183,7 +192,7 @@ export default function App() {
   };
 
   const handleEdit = (item: WishlistItem) => {
-    if (isPublicView) {
+    if (!canManageWishlist) {
       return;
     }
 
@@ -197,7 +206,7 @@ export default function App() {
   };
 
   const handleToggleForm = () => {
-    if (isPublicView) {
+    if (!canManageWishlist) {
       return;
     }
 
@@ -212,7 +221,7 @@ export default function App() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isPublicView) {
+    if (!canManageWishlist) {
       return;
     }
 
@@ -317,27 +326,35 @@ export default function App() {
 
       {!isPublicView ? (
         <section className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={handleToggleForm}
-              className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
-            >
-              {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
-            >
-              Поделиться ссылкой
-            </button>
-          </div>
-          {shareStatus ? (
+          {canManageWishlist ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleToggleForm}
+                  className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+                >
+                  {isFormOpen ? 'Скрыть форму' : 'Добавить хотелку'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
+                >
+                  Поделиться ссылкой
+                </button>
+              </div>
+              {shareStatus ? (
+                <p className="mt-2 text-xs text-rose-700">
+                  {shareStatus === 'success' ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку'}
+                </p>
+              ) : null}
+            </>
+          ) : (
             <p className="mt-2 text-xs text-rose-700">
-              {shareStatus === 'success' ? 'Ссылка скопирована' : 'Не удалось скопировать ссылку'}
+              Режим просмотра. Для редактирования нужна admin-ссылка.
             </p>
-          ) : null}
+          )}
           {requestError ? <p className="mt-2 text-xs text-rose-700">{requestError}</p> : null}
         </section>
       ) : requestError ? (
@@ -346,7 +363,7 @@ export default function App() {
         </section>
       ) : null}
 
-      {!isPublicView && isFormOpen ? (
+      {canManageWishlist && isFormOpen ? (
         <form
           onSubmit={handleSubmit}
           className="mb-6 space-y-4 rounded-2xl border border-rose-100 bg-rose-50/70 p-4 shadow-sm sm:p-5"
@@ -457,7 +474,7 @@ export default function App() {
           items={items}
           onDelete={handleDelete}
           onEdit={handleEdit}
-          isReadOnly={isPublicView}
+          isReadOnly={!canManageWishlist}
         />
       )}
     </AppShell>
