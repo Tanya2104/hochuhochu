@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import { AppHeader } from '../components/layout/AppHeader';
 import { ProfileHero } from '../features/profile/components/ProfileHero';
@@ -16,6 +16,9 @@ const priorityLabels: Record<WishlistPriority, string> = {
 
 const WISHLIST_STORAGE_KEY = 'hochuhochu-wishlist';
 const WISHLIST_IMAGE_BUCKET = 'wishlist-images';
+const SUPPORTED_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const;
+const SUPPORTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'] as const;
+const IMAGE_INPUT_ACCEPT = 'image/png,image/jpeg,image/jpg,image/webp,image/*';
 
 type WishlistRow = Database['public']['Tables']['wishlist_items']['Row'];
 type WishlistInsert = Database['public']['Tables']['wishlist_items']['Insert'];
@@ -100,6 +103,15 @@ const getFallbackItems = (): WishlistItem[] => {
   }
 };
 
+const isSupportedImageFile = (file: File): boolean => {
+  if (SUPPORTED_IMAGE_MIME_TYPES.includes(file.type as (typeof SUPPORTED_IMAGE_MIME_TYPES)[number])) {
+    return true;
+  }
+
+  const lowerCaseName = file.name.toLowerCase();
+  return SUPPORTED_IMAGE_EXTENSIONS.some((extension) => lowerCaseName.endsWith(extension));
+};
+
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isPublicView = searchParams.get('view') === 'public';
@@ -127,6 +139,7 @@ export default function App() {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [sessionReservedItemIds, setSessionReservedItemIds] = useState<Set<string>>(new Set());
+  const activeUploadIdRef = useRef(0);
 
   useEffect(() => {
     if (!statusMessage) {
@@ -195,6 +208,7 @@ export default function App() {
   }, [hasSupabase, items]);
 
   const resetForm = () => {
+    activeUploadIdRef.current += 1;
     setTitle('');
     setDescription('');
     setPrice('');
@@ -271,9 +285,22 @@ export default function App() {
       return;
     }
 
+    if (!isSupportedImageFile(file)) {
+      setUploadStatus({
+        text: 'Поддерживаются PNG, JPG/JPEG и WEBP. Хотелку можно сохранить без картинки.',
+        tone: 'error',
+      });
+      return;
+    }
+
+    const uploadId = activeUploadIdRef.current + 1;
+    activeUploadIdRef.current = uploadId;
+
     if (!hasSupabase || !supabase) {
-      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
-      setRequestError('Загрузка изображений доступна только при подключённом Supabase.');
+      setUploadStatus({
+        text: 'Загрузка недоступна без Supabase. Хотелку можно сохранить без картинки.',
+        tone: 'error',
+      });
       return;
     }
 
@@ -285,15 +312,25 @@ export default function App() {
       .from(WISHLIST_IMAGE_BUCKET)
       .upload(uniqueName, file, { cacheControl: '3600', upsert: false });
 
+    if (uploadId !== activeUploadIdRef.current) {
+      return;
+    }
+
     if (error) {
-      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
+      setUploadStatus({
+        text: 'Не удалось загрузить изображение. Хотелку можно сохранить без картинки.',
+        tone: 'error',
+      });
       setIsImageUploading(false);
       return;
     }
 
     const { data } = supabase.storage.from(WISHLIST_IMAGE_BUCKET).getPublicUrl(uniqueName);
     if (!data.publicUrl) {
-      setUploadStatus({ text: 'Не удалось загрузить изображение', tone: 'error' });
+      setUploadStatus({
+        text: 'Не удалось получить ссылку изображения. Хотелку можно сохранить без картинки.',
+        tone: 'error',
+      });
       setIsImageUploading(false);
       return;
     }
@@ -336,23 +373,31 @@ export default function App() {
       link: link.trim() || 'https://example.com',
       priority,
     };
+    const normalizedImageUrl = imageUrl && imageUrl.trim().length > 0 ? imageUrl : null;
     const dbPayload = {
       ...basePayload,
-      image_url: imageUrl,
+      image_url: normalizedImageUrl,
     };
+
+    if (isImageUploading) {
+      setUploadStatus({
+        text: 'Изображение ещё загружается. Хотелка будет сохранена с текущими данными.',
+        tone: 'success',
+      });
+    }
 
     if (!hasSupabase || !supabase) {
       if (editingItemId) {
         setItems((prev) =>
           prev.map((item) =>
-            item.id === editingItemId ? { ...item, ...basePayload, imageUrl } : item,
+            item.id === editingItemId ? { ...item, ...basePayload, imageUrl: normalizedImageUrl } : item,
           ),
         );
       } else {
         const localItem: WishlistItem = {
           id: crypto.randomUUID(),
           ...basePayload,
-          imageUrl,
+          imageUrl: normalizedImageUrl,
           reserved: false,
           reservedBy: null,
         };
@@ -686,7 +731,7 @@ export default function App() {
             <input
               id="image-file"
               type="file"
-              accept="image/*"
+              accept={IMAGE_INPUT_ACCEPT}
               onChange={(event) => {
                 void handleImageUpload(event);
               }}
@@ -710,7 +755,6 @@ export default function App() {
 
           <button
             type="submit"
-            disabled={isImageUploading}
             className="w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-600"
           >
             {editingItemId ? 'Сохранить изменения' : 'Сохранить хотелку'}
