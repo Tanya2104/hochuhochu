@@ -11,6 +11,7 @@ type WishlistCardProps = {
   canManageWishlist?: boolean;
   onReserve?: (item: WishlistItem) => void;
   onUnreserve?: (id: string) => void;
+  canUnreserveInPublicSession?: boolean;
 };
 
 const priorityMeta: Record<WishlistPriority, { label: string; className: string }> = {
@@ -41,6 +42,7 @@ export function WishlistCard({
   canManageWishlist = false,
   onReserve,
   onUnreserve,
+  canUnreserveInPublicSession = false,
 }: WishlistCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const meta = priorityMeta[item.priority];
@@ -100,17 +102,14 @@ export function WishlistCard({
       {item.reserved ? (
         <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
           <p className="text-sm font-semibold text-amber-800">Уже забронировано</p>
-          {item.reservedBy ? (
-            <p className="text-xs text-amber-700">Забронировал(а): {item.reservedBy}</p>
-          ) : null}
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="text-sm font-medium text-indigo-600 underline-offset-2 transition hover:text-indigo-500 hover:underline"
+          className="inline-flex min-h-9 items-center justify-center rounded-md border border-indigo-100 px-3 py-1.5 text-sm font-medium text-indigo-600 underline-offset-2 transition hover:bg-indigo-50 hover:text-indigo-500 hover:underline"
         >
           {isExpanded ? 'Скрыть' : 'Открыть'}
         </button>
@@ -119,19 +118,29 @@ export function WishlistCard({
           <button
             type="button"
             onClick={() => onReserve(item)}
-            className="rounded-md border border-indigo-200 px-3 py-1 text-sm font-medium text-indigo-700 transition hover:bg-indigo-50 hover:text-indigo-800"
+            className="inline-flex min-h-9 items-center justify-center rounded-md border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-50 hover:text-indigo-800"
           >
             Беру это
           </button>
         ) : null}
 
+        {isPublicView && item.reserved && canUnreserveInPublicSession && onUnreserve ? (
+          <button
+            type="button"
+            onClick={() => onUnreserve(item.id)}
+            className="inline-flex min-h-9 items-center justify-center rounded-md border border-amber-200 px-3 py-1.5 text-sm font-medium text-amber-700 transition hover:bg-amber-50 hover:text-amber-800"
+          >
+            Отменить бронь
+          </button>
+        ) : null}
+
         {!isReadOnly ? (
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {canManageWishlist && item.reserved && onUnreserve ? (
               <button
                 type="button"
                 onClick={() => onUnreserve(item.id)}
-                className="rounded-md border border-amber-200 px-2.5 py-1 text-sm text-amber-700 transition hover:bg-amber-50 hover:text-amber-800"
+                className="inline-flex min-h-9 items-center justify-center rounded-md border border-amber-200 px-3 py-1.5 text-sm text-amber-700 transition hover:bg-amber-50 hover:text-amber-800"
               >
                 Снять бронь
               </button>
@@ -141,7 +150,7 @@ export function WishlistCard({
               <button
                 type="button"
                 onClick={() => onEdit(item)}
-                className="rounded-md border border-rose-200 px-2.5 py-1 text-sm text-rose-700 transition hover:bg-rose-50 hover:text-rose-800"
+                className="inline-flex min-h-9 items-center justify-center rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-700 transition hover:bg-rose-50 hover:text-rose-800"
               >
                 Редактировать
               </button>
@@ -151,7 +160,7 @@ export function WishlistCard({
               <button
                 type="button"
                 onClick={() => onDelete(item.id)}
-                className="rounded-md border border-slate-200 px-2.5 py-1 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
+                className="inline-flex min-h-9 items-center justify-center rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
               >
                 Удалить
               </button>

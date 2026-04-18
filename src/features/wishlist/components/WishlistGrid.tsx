@@ -12,6 +12,7 @@ type WishlistGridProps = {
   canManageWishlist?: boolean;
   onReserve?: (item: WishlistItem) => void;
   onUnreserve?: (id: string) => void;
+  sessionReservedItemIds?: Set<string>;
 };
 
 export function WishlistGrid({
@@ -23,6 +24,7 @@ export function WishlistGrid({
   canManageWishlist = false,
   onReserve,
   onUnreserve,
+  sessionReservedItemIds = new Set(),
 }: WishlistGridProps) {
   const sectionTitle = isReadOnly ? 'Идеи для подарка' : 'ХочуХочу список';
   const sectionSubtitle = isReadOnly
@@ -56,6 +58,7 @@ export function WishlistGrid({
               canManageWishlist={canManageWishlist}
               onReserve={onReserve}
               onUnreserve={onUnreserve}
+              canUnreserveInPublicSession={isPublicView && sessionReservedItemIds.has(item.id)}
             />
           ))}
         </div>
