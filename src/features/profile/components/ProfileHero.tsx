@@ -10,7 +10,13 @@ export function ProfileHero({ isPublicView = false }: ProfileHeroProps) {
   return (
     <section className="py-6 sm:py-8">
       <Container>
-        <Card className="rounded-3xl bg-rose-50/70 p-5 sm:p-7">
+        <Card
+          className={
+            isPublicView
+              ? 'rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm sm:p-7'
+              : 'rounded-3xl bg-rose-50/70 p-5 sm:p-7'
+          }
+        >
           <div className="space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight text-rose-950 sm:text-4xl">
               {profileMock.name}
@@ -18,8 +24,8 @@ export function ProfileHero({ isPublicView = false }: ProfileHeroProps) {
             <p className="text-sm font-medium text-rose-700/80">{profileMock.age} лет</p>
             <p className="text-base leading-relaxed text-rose-900/70">{profileMock.bio}</p>
             {isPublicView ? (
-              <p className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-rose-900/80">
-                Список желаний Ксюши. Здесь собраны вещи, которые ей правда понравятся.
+              <p className="rounded-2xl bg-rose-50/70 px-4 py-3 text-sm leading-relaxed text-rose-900/80">
+                Здесь собраны вещи, которые Ксюше правда понравятся.
               </p>
             ) : null}
           </div>
