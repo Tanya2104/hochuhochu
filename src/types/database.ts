@@ -9,6 +9,7 @@ export type Database = {
           price: string;
           priority: string;
           link: string;
+          image_url: string | null;
           reserved: boolean;
           reserved_by: string | null;
           created_at: string;
@@ -20,6 +21,7 @@ export type Database = {
           price: string;
           priority: string;
           link: string;
+          image_url?: string | null;
           reserved?: boolean;
           reserved_by?: string | null;
           created_at?: string;
@@ -31,6 +33,7 @@ export type Database = {
           price?: string;
           priority?: string;
           link?: string;
+          image_url?: string | null;
           reserved?: boolean;
           reserved_by?: string | null;
           created_at?: string;
